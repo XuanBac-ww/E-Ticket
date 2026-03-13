@@ -34,3 +34,6 @@ build/
 
 target/
 .idea/
+
+
+.env
