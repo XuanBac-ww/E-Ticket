@@ -12,9 +12,7 @@ import java.util.Date;
 @MappedSuperclass
 @Getter
 @Setter
-@SoftDelete(columnName = "deleted", strategy = SoftDeleteType.ACTIVE)
+@SoftDelete(columnName = "deleted", strategy = SoftDeleteType.DELETED)
 public abstract class BaseSoftDelete extends BaseEntity{
 
-    @Column(name = "deleted_at")
-    private Date deletedAt;
 }
