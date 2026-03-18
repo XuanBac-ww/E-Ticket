@@ -1,0 +1,32 @@
+package com.example.backend.controller.customer.order.api;
+
+import com.example.backend.dto.request.order.CreateOrderItemRequest;
+import com.example.backend.dto.response.order.OrderItemResponse;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+public interface OrderItemApi {
+
+    @GetMapping("")
+    ResponseEntity<List<OrderItemResponse>> getOrderItems(@PathVariable Long orderId);
+
+    @GetMapping("/{itemId}")
+    ResponseEntity<OrderItemResponse> getOrderItem(@PathVariable Long orderId,
+                                                   @PathVariable Long itemId
+    );
+
+    @PostMapping("")
+    ResponseEntity<OrderItemResponse> addOrderItem(
+            @PathVariable Long orderId,
+            @Valid @RequestBody CreateOrderItemRequest request
+    );
+
+    @DeleteMapping("/{itemId}")
+    ResponseEntity<String> deleteOrderItem(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId
+    );
+}

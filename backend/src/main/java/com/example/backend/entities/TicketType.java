@@ -30,4 +30,8 @@ public class TicketType extends BaseSoftDelete {
 
     @Column(name = "remaining_quantity", nullable = false)
     private Integer remainingQuantity;
+
+    @Version
+    private Long version;
+
 }

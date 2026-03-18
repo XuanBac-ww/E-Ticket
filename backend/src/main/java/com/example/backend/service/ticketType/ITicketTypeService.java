@@ -7,6 +7,7 @@ import com.example.backend.dto.response.ticketType.TicketTypeResponse;
 import java.util.List;
 
 public interface ITicketTypeService {
+
     TicketTypeResponse createTicketTypeForEvent(Long eventId,CreateTicketTypeRequest request);
 
     List<TicketTypeResponse> getTicketTypeForEvent(Long eventId);

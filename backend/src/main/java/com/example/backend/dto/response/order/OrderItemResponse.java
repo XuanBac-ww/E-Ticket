@@ -4,9 +4,8 @@ import java.math.BigDecimal;
 
 public record OrderItemResponse(
         Long id,
+        Long orderId,
         Long ticketId,
-        String ticketCode,
-        String ticketTypeName,
         BigDecimal priceAtPurchase
 ) {
 }

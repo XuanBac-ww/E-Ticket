@@ -4,7 +4,6 @@ import com.example.backend.dto.request.event.CreateEventRequest;
 import com.example.backend.dto.request.event.UpdateEventRequest;
 import com.example.backend.dto.response.event.EventResponse;
 import com.example.backend.service.event.IEventService;
-import com.example.backend.service.ticketType.ITicketTypeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

@@ -2,9 +2,7 @@ package com.example.backend.entities;
 
 import com.example.backend.entities.abstraction.BaseEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 
@@ -13,6 +11,8 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class OrderItem extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
