@@ -5,6 +5,7 @@ import com.example.backend.dto.request.order.CreateOrderRequest;
 import com.example.backend.dto.request.order.UpdateOrderStatusRequest;
 import com.example.backend.dto.response.api.PageResponse;
 import com.example.backend.dto.response.order.OrderResponse;
+import com.example.backend.security.CustomUserPrincipal;
 import com.example.backend.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,11 @@ public class OrderController implements OrderApi {
 
     private final IOrderService orderService;
 
+
     @Override
-    public ResponseEntity<OrderResponse> createOrder(CreateOrderRequest request) {
-        OrderResponse response = orderService.createOrder(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    public ResponseEntity<OrderResponse> createOrder(CreateOrderRequest request,
+                                                     CustomUserPrincipal principal) {
+        return new ResponseEntity<>(orderService.createOrder(principal.getUserId(),request),HttpStatus.OK);
     }
 
     @Override

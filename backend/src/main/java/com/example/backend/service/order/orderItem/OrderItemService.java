@@ -13,6 +13,7 @@ import com.example.backend.repository.ITicketRepository;
 import com.example.backend.service.order.share.IOrderSupportService;
 import com.example.backend.share.enums.OrderStatus;
 import com.example.backend.share.exception.AppException;
+import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class OrderItemService implements IOrderItemService {
         orderSupportService.findOrderById(orderId);
 
         OrderItem orderItem = orderItemRepository.findByIdAndOrderId(itemId, orderId)
-                .orElseThrow(() -> new AppException("OrderItem Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("OrderItem Not Found"));
 
         return orderItemMapper.toResponse(orderItem);
     }
@@ -68,7 +69,7 @@ public class OrderItemService implements IOrderItemService {
         Date holdExpiresAt = orderSupportService.buildHoldExpiresAt();
 
         Ticket ticket = ticketRepository.findByIdInFetchTicketType(request.ticketId())
-                .orElseThrow(() -> new AppException("Ticket Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket Not Found"));
 
         TicketType ticketType = orderSupportService.validatePurchasableTicket(ticket, now);
 

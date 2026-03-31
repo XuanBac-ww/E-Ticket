@@ -16,6 +16,7 @@ import com.example.backend.repository.ITicketRepository;
 import com.example.backend.service.order.share.IOrderSupportService;
 import com.example.backend.share.enums.OrderStatus;
 import com.example.backend.share.exception.AppException;
+import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -42,8 +43,8 @@ public class OrderService implements IOrderService {
 
     @Override
     @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request) {
-        Customer customer = orderSupportService.findCustomerById(request.customerId());
+    public OrderResponse createOrder(Long userId,CreateOrderRequest request) {
+        Customer customer = orderSupportService.findCustomerById(userId);
         orderSupportService.validateCreateOrderRequest(request);
 
         List<Long> ticketIds = request.items().stream()
@@ -72,7 +73,7 @@ public class OrderService implements IOrderService {
         for (CreateOrderItemRequest itemRequest : request.items()) {
             Ticket ticket = ticketMap.get(itemRequest.ticketId());
             if (ticket == null) {
-                throw new AppException("Ticket not found: " + itemRequest.ticketId());
+                throw new ResourceNotFoundException("Ticket not found: " + itemRequest.ticketId());
             }
 
             TicketType ticketType = orderSupportService.validatePurchasableTicket(ticket, now);
@@ -176,7 +177,4 @@ public class OrderService implements IOrderService {
 
         orderRepository.delete(order);
     }
-
-
-
 }

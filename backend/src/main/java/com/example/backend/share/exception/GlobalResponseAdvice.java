@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jspecify.annotations.NonNull;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.ByteArrayHttpMessageConverter;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
@@ -33,11 +34,23 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
                                   @NonNull ServerHttpRequest request,
                                   @NonNull ServerHttpResponse response) {
 
+        String path = request.getURI().getPath();
+
+        if (path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.equals("/swagger-ui.html")) {
+            return body;
+        }
+
         if (body == null) {
             return new ApiResponse<>(200, true, "Success", null);
         }
 
-        if (body instanceof BaseResponse) {
+        if (body instanceof BaseResponse || body instanceof byte[]) {
+            return body;
+        }
+
+        if (ByteArrayHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
             return body;
         }
 

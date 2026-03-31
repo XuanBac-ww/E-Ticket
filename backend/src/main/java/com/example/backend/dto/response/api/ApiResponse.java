@@ -4,6 +4,7 @@ import com.example.backend.dto.response.api.abstraction.BaseResponse;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.jspecify.annotations.Nullable;
 
 @NoArgsConstructor
 @Getter
@@ -12,7 +13,7 @@ public class ApiResponse<T> extends BaseResponse {
 
     private T data;
 
-    public ApiResponse(int code, boolean success, String message, T data) {
+    public ApiResponse(int code, boolean success, String message,@Nullable T data) {
         super(code, success, message);
         this.data = data;
     }

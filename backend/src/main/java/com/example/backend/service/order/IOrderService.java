@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface IOrderService {
 
-    OrderResponse createOrder(CreateOrderRequest request);
+    OrderResponse createOrder(Long userId,CreateOrderRequest request);
 
     PageResponse<OrderResponse> getAllOrders(int page, int size);
 

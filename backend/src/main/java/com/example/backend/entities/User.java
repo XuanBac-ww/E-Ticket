@@ -4,12 +4,13 @@ import com.example.backend.entities.abstraction.BaseSoftDelete;
 import com.example.backend.share.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 public class User extends BaseSoftDelete {
@@ -28,5 +29,6 @@ public class User extends BaseSoftDelete {
     private UserRole role;
 
     @Column(name = "is_active", nullable = false)
+    @Builder.Default
     private boolean active = true;
 }

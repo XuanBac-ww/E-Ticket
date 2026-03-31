@@ -2,17 +2,18 @@ package com.example.backend.entities;
 
 import com.example.backend.entities.abstraction.BaseSoftDelete;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "ticket_types")
-@Getter
-@Setter
+@SuperBuilder
 @NoArgsConstructor
+@AllArgsConstructor
+@Setter
+@Getter
 public class TicketType extends BaseSoftDelete {
 
     @ManyToOne(fetch = FetchType.EAGER)

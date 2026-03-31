@@ -9,6 +9,7 @@ import com.example.backend.entities.Event;
 import com.example.backend.mapper.IEventMapper;
 import com.example.backend.repository.IEventRepository;
 import com.example.backend.share.exception.AppException;
+import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -50,7 +51,7 @@ public class EventService implements IEventService {
     @Override
     public EventResponse findEventById(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new AppException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
         return eventMapper.toResponse(event);
     }
 
@@ -70,7 +71,7 @@ public class EventService implements IEventService {
     @Transactional
     public EventResponse updateEvent(Long eventId, UpdateEventRequest request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new AppException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
 
         event.setLocation(request.location());
         event.setStartTime(request.startTime());
@@ -84,7 +85,7 @@ public class EventService implements IEventService {
     @Transactional
     public void deleteEventById(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new AppException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
         eventRepository.delete(event);
     }
 

@@ -1,6 +1,7 @@
 package com.example.backend.share.exception;
 
 import com.example.backend.dto.response.api.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,7 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -54,9 +55,9 @@ public class GlobalHandlerException {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleNotFoundException(NoResourceFoundException ex) {
-        log.warn("404 Not Found: {}", ex.getResourcePath());
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNotFoundException(ResourceNotFoundException ex) {
+        log.warn("404 Not Found: {}", ex.getMessage());
 
         ApiResponse<Object> response = new ApiResponse<>(
                 HttpStatus.NOT_FOUND.value(),
@@ -78,5 +79,19 @@ public class GlobalHandlerException {
                 null
         );
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNoHandlerFound(
+            NoHandlerFoundException ex,
+            HttpServletRequest request
+    ) {
+        ApiResponse<Object> response = new ApiResponse<>(
+                HttpStatus.NOT_FOUND.value(),
+                false,
+                ex.getMessage(),
+                null
+        );
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 }

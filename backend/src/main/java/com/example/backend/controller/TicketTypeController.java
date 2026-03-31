@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +24,7 @@ public class TicketTypeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketTypeResponse> updateTicketType(@PathVariable Long id,
                                                                @Valid @RequestBody UpdateTicketTypeRequest request) {
         TicketTypeResponse response = ticketTypeService.updateTicketType(id,request);
@@ -30,6 +32,7 @@ public class TicketTypeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteTicketType(@PathVariable Long id) {
         ticketTypeService.deleteTicketType(id);
         return new ResponseEntity<>("Delete Successfully", HttpStatus.OK);

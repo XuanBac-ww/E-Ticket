@@ -10,6 +10,7 @@ import com.example.backend.mapper.ITicketTypeMapper;
 import com.example.backend.repository.IEventRepository;
 import com.example.backend.repository.ITicketTypeRepository;
 import com.example.backend.share.exception.AppException;
+import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +31,7 @@ public class TicketTypeService implements ITicketTypeService {
     @Transactional
     public TicketTypeResponse createTicketTypeForEvent(Long eventId, CreateTicketTypeRequest request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new AppException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
 
         if(ticketTypeRepository.existsTicketByName(request.name())) {
             throw new AppException("Ticket exists");
@@ -46,7 +47,7 @@ public class TicketTypeService implements ITicketTypeService {
     @Override
     public List<TicketTypeResponse> getTicketTypeForEvent(Long eventId) {
         if (!eventRepository.existsById(eventId)) {
-            throw new AppException("Event Not Found");
+            throw new ResourceNotFoundException("Event Not Found");
         }
 
         return ticketTypeRepository.findByEventIdOrderByIdDesc(eventId)
@@ -59,14 +60,14 @@ public class TicketTypeService implements ITicketTypeService {
     public TicketTypeResponse findTicketTypeById(Long id) {
         return ticketTypeRepository.findById(id)
                 .map(ticketTypeMapper::toResponse)
-                .orElseThrow(() -> new AppException("TicketType Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TicketType Not Found"));
     }
 
     @Override
     @Transactional
     public TicketTypeResponse updateTicketType(Long id, UpdateTicketTypeRequest request) {
         TicketType ticketType = ticketTypeRepository.findById(id)
-                .orElseThrow(() -> new AppException("TicketType Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TicketType Not Found"));
 
         int soldQuantity = ticketType.getTotalQuantity() - ticketType.getRemainingQuantity();
 
@@ -84,7 +85,7 @@ public class TicketTypeService implements ITicketTypeService {
     @Transactional
     public void deleteTicketType(Long id) {
         TicketType ticketType = ticketTypeRepository.findById(id)
-                .orElseThrow(() -> new AppException("TicketType Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("TicketType Not Found"));
         ticketTypeRepository.delete(ticketType);
     }
 
