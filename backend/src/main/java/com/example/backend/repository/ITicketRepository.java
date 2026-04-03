@@ -1,7 +1,9 @@
 package com.example.backend.repository;
 
 import com.example.backend.entities.Ticket;
+import com.example.backend.entities.TicketType;
 import com.example.backend.repository.abstraction.IBaseEntityRepository;
+import com.example.backend.share.enums.TicketStatus;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,4 +25,13 @@ public interface ITicketRepository extends IBaseEntityRepository<Ticket,Long> {
     """)
     Optional<Ticket> findByIdInFetchTicketType(Long id);
 
+    List<Ticket> findByTicketType(TicketType ticketType);
+
+    List<Ticket> findByTicketTypeAndStatus(TicketType ticketType, TicketStatus ticketStatus);
+
+    long countByTicketTypeAndStatus(TicketType ticketType, TicketStatus ticketStatus);
+
+    long countByTicketType(TicketType ticketType);
+
+    boolean existsByTicketTypeAndSeatNumberIn(TicketType ticketType, List<String> seatNumbers);
 }

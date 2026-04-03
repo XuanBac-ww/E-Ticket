@@ -40,7 +40,5 @@ public class EventAdminController {
         return new ResponseEntity<>("Delete Successfully",HttpStatus.OK);
     }
 
-
-
 }
 

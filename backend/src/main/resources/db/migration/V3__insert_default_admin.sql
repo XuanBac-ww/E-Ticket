@@ -25,7 +25,6 @@ SELECT
     SELECT 1 FROM users WHERE email = 'admin@gmail.com'
 );
 
--- Tạo bản ghi admin tương ứng
 INSERT INTO admins (user_id, admin_code)
 SELECT u.id, 'ADMIN001'
 FROM users u

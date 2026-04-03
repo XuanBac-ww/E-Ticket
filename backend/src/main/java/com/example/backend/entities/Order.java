@@ -18,7 +18,7 @@ import java.util.List;
 public class Order extends BaseSoftDelete {
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private Customer customer;
 
     @Column(name = "total_amount", nullable = false)
