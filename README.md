@@ -1,449 +1,272 @@
 # E-Ticket
 
-Hệ thống quản lý sự kiện và vé điện tử gồm backend Spring Boot và frontend Next.js. Ở thời điểm hiện tại, backend đã có phần lớn nghiệp vụ cốt lõi; frontend mới dừng ở mức scaffold, chưa có màn hình thực tế trong `frontend/app`.
+Backend quan ly su kien va ve dien tu. README nay chi tap trung vao tech stack, cach trien khai, use case, flow nghiep vu va endpoint API.
 
-## Tổng quan
-
-Repository này đang tập trung vào các bài toán backend cho hệ thống bán vé:
-
-- Quản lý sự kiện
-- Quản lý loại vé và danh sách vé theo ghế
-- Đăng ký, đăng nhập, đổi mật khẩu, hồ sơ người dùng
-- Tạo đơn hàng và giữ vé trong thời gian thanh toán
-- Thanh toán qua SePay sandbox
-- Webhook xác nhận thanh toán
-- Sinh QR code cho vé
-- Báo cáo nhanh cho admin
-
-## Hiện trạng dự án
-
-### Đã có
-
-- Backend Spring Boot chạy với Java 21
-- PostgreSQL + Flyway migration
-- JWT lưu qua HTTP-only cookie
-- Swagger/OpenAPI
-- SePay payment flow
-- Scheduler tự động quét payment hết hạn
-- Một số test cho payment flow
-
-### Chưa hoàn tất
-
-- Frontend chưa có source giao diện thực tế
-- API check-in đã có route nhưng service chưa implement xong
-- Chưa có `.env.example`
-- Chưa có tài liệu màn hình/frontend flow
-- Google OAuth mới dừng ở dependency phía frontend
-
-## Công nghệ sử dụng
+## Tech Stack
 
 ### Backend
 
 - Java 21
-- Spring Boot `4.0.3`
-- Spring Web
-- Spring Security
-- Spring Data JPA
-- PostgreSQL
-- Flyway
+- Spring Boot 4.0.3
+- Spring Web MVC
+- Spring Security + JWT cookie auth
+- Spring Data JPA / Hibernate
+- Jakarta Validation
+- PostgreSQL 16
+- Flyway migration
 - MapStruct
-- JWT
+- Lombok
+- Spring Mail
+- Spring Scheduling va Async executor
 - Springdoc OpenAPI / Swagger UI
-- ZXing để sinh QR code
+- ZXing QR Code
+- Maven Wrapper
 
 ### Frontend
 
-- Next.js `16.1.6`
-- React `19.2.3`
-- TypeScript
-- Tailwind CSS v4
-- `@react-oauth/google` đã được cài nhưng chưa dùng vào flow thật
+- Next.js 16.1.6
+- React 19.2.3
+- TypeScript 5
+- Tailwind CSS 4
+- ESLint 9
 
-### Hạ tầng phát triển
+Frontend hien dang o muc scaffold, backend API la phan chinh cua repository.
 
-- Docker Compose
-- PostgreSQL 16
-- pgAdmin (profile tùy chọn)
+### Database
 
-## Kiến trúc thư mục
-
-```text
-E-Ticket/
-|-- backend/
-|   |-- src/main/java/com/example/backend/
-|   |   |-- client/           # client gọi SePay
-|   |   |-- config/           # security, flyway, web, sepay
-|   |   |-- controller/       # public, customer, admin endpoints
-|   |   |-- dto/              # request/response models
-|   |   |-- entities/         # JPA entities
-|   |   |-- mapper/           # MapStruct mapper
-|   |   |-- repository/       # JPA repositories
-|   |   |-- schedules/        # job hết hạn payment
-|   |   |-- security/         # JWT, principal, cookie
-|   |   |-- service/          # nghiệp vụ chính
-|   |   |-- share/            # enum, exception, response wrapper
-|   |   |-- validation/       # custom validation
-|   |-- src/main/resources/
-|   |   |-- application*.yaml
-|   |   |-- db/migration/     # Flyway migration + seed data
-|   |   |-- logback-spring.xml
-|   |-- Dockerfile
-|   |-- docker-compose.yml
-|   |-- pom.xml
-|-- frontend/
-|   |-- app/                  # hien dang trong
-|   |-- public/
-|   |-- package.json
-|-- docs/
-|   |-- ticketflow_api_flow_detailed_no_oauth.xlsx
-|-- README.md
-```
-
-## Nghiệp vụ hiện có
-
-### 1. Xác thực và phân quyền
-
-- `CUSTOMER` có thể đăng ký tài khoản, đăng nhập, cập nhật hồ sơ, đổi mật khẩu, tạo đơn hàng, tạo payment SePay, xem QR vé
-- `STAFF` hiện có quyền gọi API check-in
-- `ADMIN` có quyền quản lý sự kiện, loại vé, vé và xem báo cáo
-- Access token và refresh token được lưu trong cookie:
-  - `access_token`
-  - `refresh_token`
-
-### 2. Quản lý sự kiện và vé
-
-- Admin tạo sự kiện
-- Admin tạo ticket type cho từng event
-- Admin tạo danh sách ticket theo seat number
-- Hệ thống theo dõi:
-  - `total_quantity`
-  - `remaining_quantity`
-  - trạng thái từng ticket
-
-### 3. Đơn hàng và giữ vé
-
-Khi khách hàng tạo order:
-
-- Hệ thống kiểm tra từng ticket còn mua được hay không
-- Ticket hợp lệ sẽ bị chuyển sang trạng thái `HOLDING`
-- Thời gian giữ vé hiện tại là `15 phút`
-- `remaining_quantity` của ticket type sẽ giảm tương ứng
-
-Nếu đơn bị hủy hoặc hết hạn:
-
-- Ticket đang `HOLDING` được trả lại trạng thái `AVAILABLE`
-- `remaining_quantity` tăng lại
-
-Nếu thanh toán thành công:
-
-- Ticket từ `HOLDING` chuyển sang `SOLD`
-- Order chuyển sang `PAID`
-
-### 4. Thanh toán SePay
-
-Flow thanh toán đang có trong code:
-
-1. Customer tạo payment cho order đang `PENDING`
-2. Hệ thống gọi SePay để tạo virtual account/order
-3. Payment được lưu kèm:
-   - `paymentCode`
-   - `providerReferenceId`
-   - `bankName`
-   - `vaNumber`
-   - `qrUrl`
-   - `expiredAt`
-4. Webhook SePay cập nhật payment/order khi giao dịch hoàn tất
-5. Scheduler chạy mỗi 60 giây để expire các payment còn pending nhưng quá hạn
-
-### 5. QR code
-
-- Khách hàng có thể lấy ảnh QR vé qua API `GET /api/tickets/{ticketId}/qr`
-- Dữ liệu QR hiện được sinh từ `qrCodeHash`
-
-## Trạng thái nghiệp vụ và enum
-
-### User role
-
-- `ADMIN`
-- `STAFF`
-- `CUSTOMER`
-
-### Order status
-
-- `PENDING`
-- `PAID`
-- `CANCELLED`
-- `EXPIRED`
-
-### Ticket status
-
-- `AVAILABLE`
-- `HOLDING`
-- `SOLD`
-- `USED`
-- `CANCELLED`
-
-### Payment status
-
-- `PENDING`
-- `SUCCESS`
-- `FAILED`
-- `EXPIRED`
-- `CANCELLED`
-
-### Payment method
-
-- `SEPAY`
-
-## Cơ sở dữ liệu
-
-Các bảng chính đang có trong migration:
-
-- `users`
-- `admins`
-- `customers`
-- `staffs`
-- `events`
-- `ticket_types`
-- `tickets`
-- `orders`
-- `order_items`
-- `payments`
-- `payment_webhook_logs`
-
-Flyway migration hiện tại:
+Flyway migration hien co:
 
 - `V1__Initial_Schema.sql`
 - `V2__Add_admin_code_to_admins.sql`
 - `V3__insert_default_admin.sql`
 - `V4__add_version_to_ticket_types.sql`
 - `V5__seed_users_staffs_events_ticket_types_tickets.sql`
-- `V6__sepay_payment_flow.sql`
+- `V6__add_qr_payments.sql`
+- `V7__add_ticket_order_integrity_constraints.sql`
 
-## Dữ liệu seed
+Cac bang nghiep vu chinh:
 
-### Có trong migration
+- `users`, `admins`, `customers`, `staffs`
+- `events`, `ticket_types`, `tickets`
+- `orders`, `order_items`, `payments`
 
-- 1 admin mặc định:
-  - email: `admin@gmail.com`
-  - admin code: `ADMIN001`
-- Dữ liệu mẫu cho event, staff, ticket type, ticket
+### Security
 
-### Lưu ý
+- Role: `ADMIN`, `STAFF`, `CUSTOMER`
+- Access token va refresh token duoc luu bang HTTP-only cookie.
+- CSRF token co endpoint rieng `GET /api/auth/csrf`.
+- Public route chinh: auth, Swagger, `GET /api/events/**`, `GET /api/ticket-types/**`.
+- Route `/api/admin/**` yeu cau `ADMIN`.
+- Cac route con lai yeu cau dang nhap va duoc rang buoc tiep bang `@PreAuthorize`.
 
-- Password thật của admin nên được kiểm tra lại và thay bằng giá trị bạn quản lý được
-- Dữ liệu staff trong seed hiện dùng password hash placeholder, không nên dùng nguyên trạng cho môi trường thật
+## Trien Khai
 
-## Cấu hình môi trường
+### Docker
 
-Tạo file `backend/.env` để dùng với Docker Compose.
+Backend co Dockerfile multi-stage:
+
+- Build stage: `eclipse-temurin:21-jdk-alpine`
+- Runtime stage: `eclipse-temurin:21-jre-alpine`
+- App expose port `8080`
+- Artifact chay bang `java -jar /app/app.jar`
+
+Docker Compose trong `backend/docker-compose.yml` gom:
+
+- `postgres-db`: PostgreSQL 16 Alpine
+- `backend`: Spring Boot app, profile `dev`
+- `pgadmin`: tuy chon, chay qua profile `tools`
+
+Chay backend va database:
+
+```bash
+cd backend
+docker compose up --build
+```
+
+Chay them pgAdmin:
+
+```bash
+cd backend
+docker compose --profile tools up -d
+```
+
+URL mac dinh:
+
+- Backend: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- pgAdmin: `http://localhost:5050`
+
+### Bien Moi Truong
+
+Backend can cac bien sau khi chay profile `dev`:
+
+```env
+DB_URL=jdbc:postgresql://localhost:5432/eticket
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+JWT_SECRET=replace_with_a_secret_key_at_least_32_chars
+JWT_ACCESS_EXPIRATION=3600000
+JWT_REFRESH_EXPIRATION=604800000
+PAYMENT_QR_URL=https://example.com/payment-qr.png
+PAYMENT_RECEIVER_NAME=Receiver Name
+SPRING_MAIL_USERNAME=
+SPRING_MAIL_PASSWORD=
+```
+
+Docker Compose doc bien tu `backend/.env`, gom them:
 
 ```env
 POSTGRES_DB=eticket
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_PORT=5432
-
 APP_PORT=8080
 TZ=Asia/Ho_Chi_Minh
-
 PGADMIN_DEFAULT_EMAIL=admin@example.com
 PGADMIN_DEFAULT_PASSWORD=admin123
 PGADMIN_PORT=5050
-
-DB_URL=jdbc:postgresql://localhost:5432/eticket
-DB_USERNAME=postgres
-DB_PASSWORD=postgres
-APP_TIMEZONE=Asia/Ho_Chi_Minh
-
-JWT_SECRET=replace_with_a_secret_key_at_least_32_chars
-JWT_ACCESS_EXPIRATION=3600000
-JWT_REFRESH_EXPIRATION=604800000
-
-SEPAY_SANDBOX_BASE_URL=https://userapi.sepay.vn
-SEPAY_SANDBOX_API_TOKEN=
-SEPAY_SANDBOX_BANK_ACCOUNT_ID=
-SEPAY_SANDBOX_WEBHOOK_API_KEY=
-SEPAY_DURATION_SECONDS=900
-SEPAY_QRCODE_TEMPLATE=compact
 ```
 
-### Giải thích nhanh
+### Chay Local
 
-- `JWT_ACCESS_EXPIRATION` và `JWT_REFRESH_EXPIRATION` tính theo millisecond
-- `SEPAY_*` là cấu hình cho sandbox SePay
-- `APP_TIMEZONE` và `TZ` đang mặc định theo `Asia/Ho_Chi_Minh`
-
-### Lưu ý quan trọng
-
-- Docker Compose dùng file `.env` trực tiếp
-- Spring Boot khi chạy local bằng `mvnw` sẽ không tự đọc `.env`; bạn cần export biến môi trường thủ công hoặc cấu hình trong IDE
-
-## Chạy backend bằng Docker Compose
-
-Từ thư mục `backend`:
+Khoi dong database:
 
 ```bash
-docker compose up --build
-```
-
-Sau khi chạy:
-
-- Backend API: `http://localhost:8080`
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
-
-Nếu cần pgAdmin:
-
-```bash
-docker compose --profile tools up -d
-```
-
-Khi đó pgAdmin sẽ chạy ở:
-
-- `http://localhost:5050`
-
-## Chạy backend local
-
-### 1. Khởi động PostgreSQL
-
-Bạn có thể:
-
-- dùng PostgreSQL cài máy
-- hoặc chỉ bật database bằng Docker Compose
-
-Ví dụ chạy riêng database:
-
-```bash
+cd backend
 docker compose up -d postgres-db
 ```
 
-### 2. Export biến môi trường
-
-Ví dụ với PowerShell:
+Chay backend tren Windows PowerShell:
 
 ```powershell
-$env:DB_URL="jdbc:postgresql://localhost:5432/eticket"
-$env:DB_USERNAME="postgres"
-$env:DB_PASSWORD="postgres"
-$env:APP_TIMEZONE="Asia/Ho_Chi_Minh"
-$env:JWT_SECRET="replace_with_a_secret_key_at_least_32_chars"
-$env:JWT_ACCESS_EXPIRATION="3600000"
-$env:JWT_REFRESH_EXPIRATION="604800000"
-$env:SEPAY_SANDBOX_BASE_URL="https://userapi.sepay.vn"
-$env:SEPAY_SANDBOX_API_TOKEN=""
-$env:SEPAY_SANDBOX_BANK_ACCOUNT_ID=""
-$env:SEPAY_SANDBOX_WEBHOOK_API_KEY=""
-$env:SEPAY_DURATION_SECONDS="900"
-$env:SEPAY_QRCODE_TEMPLATE="compact"
-```
-
-### 3. Chạy ứng dụng
-
-```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-Trên Windows PowerShell:
-
-```powershell
+cd backend
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
-## Frontend
+Chay backend tren macOS/Linux:
 
-Frontend hiện mới ở mức scaffold.
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
 
-### Hiện có
+Kiem tra compile/test:
 
-- `package.json` với Next.js, React, TypeScript, Tailwind CSS
-- thư mục `public/`
-- cấu hình lint, TypeScript, Next.js
+```bash
+cd backend
+./mvnw test
+```
 
-### Chưa có
+## Use Case
 
-- route trong `frontend/app`
-- layout
-- page
-- component
-- service gọi API
-- state management
-- auth flow phía client
+### Customer
 
-### Ghi chú cho lần cập nhật sau
-
-- [TODO] Mô tả cấu trúc thư mục frontend sau khi có source
-- [TODO] Thêm hướng dẫn chạy frontend
-- [TODO] Thêm biến môi trường frontend
-- [TODO] Thêm ảnh chụp màn hình giao diện
-- [TODO] Thêm flow đăng nhập/đặt vé/thanh toán phía client
-
-## API chính
-
-### Auth
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/refresh`
-- `POST /api/auth/logout`
-
-### User
-
-- `GET /api/users/me`
-- `PUT /api/users/me`
-- `PUT /api/users/change-password`
-
-### Event công khai
-
-- `GET /api/events`
-- `GET /api/events/{eventId}`
-- `GET /api/events/search`
-
-> Lưu ý: endpoint search hiện đang dùng `GET` nhưng nhận body `EventSearchRequest`.
-
-### Ticket type / ticket
-
-- `GET /api/events/{eventId}/ticket-types`
-- `POST /api/events/{eventId}/ticket-types` - admin
-- `GET /api/ticket-types/{id}`
-- `PUT /api/ticket-types/{id}` - admin
-- `DELETE /api/ticket-types/{id}` - admin
-- `GET /api/ticket-types/{id}/tickets`
-- `POST /api/ticket-types/{id}/tickets` - admin
-- `GET /api/tickets/{ticketId}` - customer
-- `GET /api/tickets/{ticketId}/qr` - customer
-- `POST /api/tickets/check-in` - staff
-- `DELETE /api/tickets/{ticketId}` - admin
-
-### Order
-
-- `POST /api/orders`
-- `GET /api/orders`
-- `GET /api/orders/{orderId}`
-- `PATCH /api/orders/{orderId}/status`
-- `PATCH /api/orders/{orderId}/cancel`
-- `DELETE /api/orders/{orderId}`
-- `GET /api/orders/{orderId}/items`
-- `GET /api/orders/{orderId}/items/{itemId}`
-- `POST /api/orders/{orderId}/items`
-- `DELETE /api/orders/{orderId}/items/{itemId}`
-
-### Payment
-
-- `POST /api/orders/{orderId}/payments/sepay`
-- `GET /api/orders/{orderId}/payments/current`
-- `POST /api/payments/sepay/webhook`
+- Dang ky, dang nhap, refresh token, dang xuat.
+- Xem danh sach event, tim kiem event, xem chi tiet event.
+- Xem hang ve cua event va danh sach ghe/ticket theo ticket type.
+- Tao order tu danh sach ticket.
+- Them/xoa ticket trong order khi order con `PENDING`.
+- Tao QR payment cho order va xem payment hien tai.
+- Huy order truoc khi thanh toan.
+- Xem danh sach ve da mua, xem chi tiet ve va lay QR cua ve.
+- Cap nhat profile va doi mat khau.
 
 ### Admin
 
-- `POST /api/admin/events`
-- `PUT /api/admin/events/{eventId}`
-- `DELETE /api/admin/events/{eventId}`
-- `GET /api/admin/ticket-management/summary/{ticketTypeId}`
-- `GET /api/admin/ticket-management/sold-list/{ticketTypeId}`
+- Tao, sua, xoa event.
+- Tao ticket type cho event, cap nhat ticket type, xoa ticket type.
+- Tao ticket theo danh sach seat number, xoa ticket hop le.
+- Quan ly user: xem danh sach, khoa/mo khoa tai khoan.
+- Quan ly staff: tao staff, gan staff vao event.
+- Xac nhan payment thu cong cho order.
+- Cap nhat trang thai order.
+- Xem bao cao doanh thu va bao cao ticket.
 
-## Format response
+### Staff
 
-Phần lớn API business response được bọc theo dạng:
+- Validate QR truoc khi check-in.
+- Check-in ticket bang `qrCodeHash`.
+- Chi check-in duoc ticket thuoc event ma staff dang duoc gan.
+
+### System
+
+- Giu ve trong 15 phut khi customer tao order.
+- Tu dong expire order `PENDING` khi het thoi gian giu ve.
+- Tra ve ve ve `AVAILABLE` khi order bi huy hoac het han.
+- Chuyen ticket sang `SOLD` khi order duoc xac nhan thanh toan.
+- Chuyen ticket sang `USED` khi staff check-in thanh cong.
+- Gui email xac nhan payment va email ve kem QR sau khi payment thanh cong neu mail duoc bat.
+
+## Flow Nghiep Vu
+
+### 1. Auth Flow
+
+1. Client goi `GET /api/auth/csrf` de lay CSRF token.
+2. Customer dang ky bang `POST /api/auth/register`.
+3. User dang nhap bang `POST /api/auth/login`.
+4. Backend tao access token va refresh token, sau do set vao HTTP-only cookie.
+5. Client goi API protected bang cookie da co.
+6. Khi access token het han, client goi `POST /api/auth/refresh`.
+7. Dang xuat bang `POST /api/auth/logout`, backend clear auth cookies.
+
+### 2. Event Va Inventory Flow
+
+1. Admin tao event bang `POST /api/admin/events`.
+2. Admin tao ticket type cho event bang `POST /api/events/{eventId}/ticket-types`.
+3. Admin tao ticket/ghe bang `POST /api/ticket-types/{id}/tickets`.
+4. Customer xem event public bang `GET /api/events`.
+5. Customer xem hang ve bang `GET /api/events/{eventId}/ticket-types`.
+6. Customer xem ticket trong hang ve bang `GET /api/ticket-types/{id}/tickets`.
+
+### 3. Booking Va Hold Flow
+
+1. Customer tao order bang `POST /api/orders` voi danh sach `ticketId`.
+2. Backend kiem tra ticket co the mua:
+   - `AVAILABLE`, hoac `HOLDING` nhung da het hold.
+   - ticket type con `remainingQuantity`.
+   - khong trung ticket trong cung order.
+3. Ticket duoc chuyen sang `HOLDING`.
+4. `holdExpiresAt` duoc set sau 15 phut.
+5. `remainingQuantity` cua ticket type giam tuong ung.
+6. Order duoc tao voi status `PENDING`.
+
+### 4. Payment Flow
+
+1. Customer tao payment bang `POST /api/orders/{orderId}/payments` hoac `POST /api/orders/{orderId}/payments/qr`.
+2. Backend yeu cau order thuoc customer, dang `PENDING`, con item va chua het hold.
+3. Backend tao payment method `PERSONAL_QR` voi `paymentCode`, `qrUrl`, `transferContent`, `expiredAt`.
+4. Neu payment `PENDING` con han da ton tai, backend tra lai payment cu.
+5. Admin xac nhan thu cong bang `PATCH /api/admin/orders/{orderId}/payments/confirm`.
+6. Backend chuyen order sang `PAID`, payment sang `SUCCESS`, ticket tu `HOLDING` sang `SOLD`.
+7. Sau commit, system phat event gui email xac nhan payment va email ticket QR neu `app.mail.enabled=true`.
+
+### 5. Cancel Va Expiration Flow
+
+1. Customer huy order bang `PATCH /api/orders/{orderId}/cancel` khi order con `PENDING`.
+2. Backend cancel payment `PENDING`, release ticket ve `AVAILABLE`, tang lai `remainingQuantity`.
+3. Scheduler `PendingOrderExpirationScheduler` chay theo delay cau hinh.
+4. Order `PENDING` co hold het han se chuyen sang `EXPIRED`.
+5. Payment `PENDING` cua order do chuyen sang `EXPIRED`.
+6. Ticket dang `HOLDING` duoc release.
+
+### 6. Check-In Flow
+
+1. Customer lay QR ticket bang `GET /api/tickets/{ticketId}/qr`.
+2. Staff scan QR de lay `qrCodeHash`.
+3. Staff goi `POST /api/tickets/check-in/validate` de xem ticket co hop le khong.
+4. Staff goi `POST /api/tickets/check-in` de check-in that.
+5. Backend kiem tra:
+   - ticket ton tai theo `qrCodeHash`.
+   - staff duoc gan dung event.
+   - ticket dang `SOLD`.
+   - ticket chua `USED` va chua `checkedIn`.
+6. Backend set `checkedIn=true`, `checkedInAt=now`, status `USED`.
+
+## Endpoint
+
+Base URL local: `http://localhost:8080`
+
+Response mac dinh duoc boc bang:
 
 ```json
 {
@@ -454,28 +277,99 @@ Phần lớn API business response được bọc theo dạng:
 }
 ```
 
-Response có phân trang dùng thêm:
+Endpoint tra `PageResponse` co them `page`, `size`, `totalElements`, `totalPages`, `last`.
 
-- `page`
-- `size`
-- `totalElements`
-- `totalPages`
-- `last`
+Endpoint `GET /api/tickets/{ticketId}/qr` tra raw `image/png`, khong boc `ApiResponse`.
 
-Ngoại lệ đáng chú ý:
+### Auth
 
-- endpoint trả QR dùng `image/png`
-- webhook SePay trả trực tiếp:
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| GET | `/api/auth/csrf` | Public | Lay CSRF token |
+| POST | `/api/auth/register` | Public | Dang ky customer |
+| POST | `/api/auth/login` | Public | Dang nhap va set token cookie |
+| POST | `/api/auth/refresh` | Public | Tao access token moi tu refresh token |
+| POST | `/api/auth/logout` | Public | Clear auth cookies |
+| GET | `/api/auth/me` | ADMIN/STAFF/CUSTOMER | Lay thong tin user hien tai |
 
-```json
-{
-  "success": true
-}
-```
+### Customer Profile
 
-## Ví dụ payload
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| GET | `/api/users/me` | CUSTOMER | Lay profile customer |
+| PUT | `/api/users/me` | CUSTOMER | Cap nhat full name, phone number |
+| PUT | `/api/users/change-password` | CUSTOMER | Doi mat khau |
 
-### Đăng ký customer
+### Public Event Va Ticket Catalog
+
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| GET | `/api/events?page=&size=` | Public | Lay danh sach event |
+| GET | `/api/events/search?page=&size=` | Public | Tim event theo `keyword` trong request body |
+| GET | `/api/events/{eventId}` | Public | Lay chi tiet event |
+| GET | `/api/events/{eventId}/ticket-types` | Public | Lay ticket type cua event |
+| GET | `/api/ticket-types/{id}` | Public | Lay chi tiet ticket type |
+| GET | `/api/ticket-types/{id}/tickets` | Public | Lay danh sach ticket/ghe cua ticket type |
+
+### Admin Event Va Ticket Inventory
+
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| POST | `/api/admin/events` | ADMIN | Tao event |
+| PUT | `/api/admin/events/{eventId}` | ADMIN | Cap nhat location/startTime/endTime |
+| DELETE | `/api/admin/events/{eventId}` | ADMIN | Xoa event |
+| POST | `/api/events/{eventId}/ticket-types` | ADMIN | Tao ticket type cho event |
+| PUT | `/api/ticket-types/{id}` | ADMIN | Cap nhat price/totalQuantity |
+| DELETE | `/api/ticket-types/{id}` | ADMIN | Xoa ticket type |
+| POST | `/api/ticket-types/{id}/tickets` | ADMIN | Tao tickets theo danh sach `seatNumber` |
+| DELETE | `/api/tickets/{ticketId}` | ADMIN | Xoa ticket neu con `AVAILABLE` va hop le |
+
+### Order Va Payment
+
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| POST | `/api/orders` | CUSTOMER | Tao order va hold ticket |
+| GET | `/api/orders?page=&size=` | CUSTOMER | Lay danh sach order cua customer |
+| GET | `/api/orders/{orderId}` | CUSTOMER | Lay chi tiet order |
+| PATCH | `/api/orders/{orderId}/status` | ADMIN | Cap nhat status order |
+| PATCH | `/api/orders/{orderId}/cancel` | CUSTOMER | Huy order `PENDING` |
+| DELETE | `/api/orders/{orderId}` | CUSTOMER | Xoa order chua thanh toan |
+| GET | `/api/orders/{orderId}/items` | CUSTOMER | Lay order items |
+| GET | `/api/orders/{orderId}/items/{itemId}` | CUSTOMER | Lay chi tiet order item |
+| POST | `/api/orders/{orderId}/items` | CUSTOMER | Them ticket vao order `PENDING` |
+| DELETE | `/api/orders/{orderId}/items/{itemId}` | CUSTOMER | Xoa ticket khoi order `PENDING` |
+| POST | `/api/orders/{orderId}/payments` | CUSTOMER | Tao QR payment |
+| POST | `/api/orders/{orderId}/payments/qr` | CUSTOMER | Alias tao QR payment |
+| GET | `/api/orders/{orderId}/payments/current` | CUSTOMER | Lay payment hien tai cua order |
+| PATCH | `/api/admin/orders/{orderId}/payments/confirm` | ADMIN | Xac nhan payment thu cong |
+
+### Customer Ticket Va Staff Check-In
+
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| GET | `/api/tickets/my` | CUSTOMER | Lay danh sach ticket da mua/da dung |
+| GET | `/api/tickets/{ticketId}` | CUSTOMER | Lay chi tiet ticket cua customer |
+| GET | `/api/tickets/{ticketId}/qr` | CUSTOMER | Lay QR image cua ticket |
+| POST | `/api/tickets/check-in/validate` | STAFF | Validate QR truoc khi check-in |
+| POST | `/api/tickets/check-in` | STAFF | Check-in ticket |
+
+### Admin User, Staff Va Report
+
+| Method | Endpoint | Role | Muc dich |
+| --- | --- | --- | --- |
+| GET | `/api/admin/users?page=&size=` | ADMIN | Lay danh sach user |
+| PATCH | `/api/admin/users/{userId}/active` | ADMIN | Khoa/mo khoa user |
+| GET | `/api/admin/staffs?page=&size=` | ADMIN | Lay danh sach staff |
+| POST | `/api/admin/staffs` | ADMIN | Tao staff |
+| PATCH | `/api/admin/staffs/{staffId}/managed-event` | ADMIN | Gan staff vao event |
+| GET | `/api/admin/reports/revenue?startDate=&endDate=` | ADMIN | Bao cao doanh thu |
+| GET | `/api/admin/reports/tickets` | ADMIN | Bao cao ticket |
+| GET | `/api/admin/ticket-management/summary/{ticketTypeId}` | ADMIN | Tong quan ticket type |
+| GET | `/api/admin/ticket-management/sold-list/{ticketTypeId}` | ADMIN | Danh sach ticket da ban |
+
+## Request Body Chinh
+
+### Register
 
 ```json
 {
@@ -487,7 +381,7 @@ Ngoại lệ đáng chú ý:
 }
 ```
 
-### Tạo event
+### Create Event
 
 ```json
 {
@@ -500,7 +394,7 @@ Ngoại lệ đáng chú ý:
 }
 ```
 
-### Tạo ticket type
+### Create Ticket Type
 
 ```json
 {
@@ -510,7 +404,7 @@ Ngoại lệ đáng chú ý:
 }
 ```
 
-### Tạo ticket theo seat
+### Create Tickets
 
 ```json
 {
@@ -518,7 +412,7 @@ Ngoại lệ đáng chú ý:
 }
 ```
 
-### Tạo order
+### Create Order
 
 ```json
 {
@@ -529,56 +423,38 @@ Ngoại lệ đáng chú ý:
 }
 ```
 
-## Kiểm thử
+### Check-In
 
-Test hiện có tập trung vào payment:
-
-- `PaymentServiceTest`
-- `PaymentCodeGeneratorTest`
-- `SepayPropertiesTest`
-- `PaymentControllerTest`
-
-Chạy test backend:
-
-```bash
-./mvnw test
+```json
+{
+  "qrCodeHash": "ticket-qr-code-hash"
+}
 ```
 
-Trên Windows PowerShell:
+## Trang Thai Nghiep Vu
 
-```powershell
-.\mvnw.cmd test
-```
+### OrderStatus
 
-## Tài liệu bổ sung
+- `PENDING`
+- `PAID`
+- `CANCELLED`
+- `EXPIRED`
 
-- File flow nghiệp vụ: `docs/ticketflow_api_flow_detailed_no_oauth.xlsx`
+### TicketStatus
 
-## Hạn chế hiện tại
+- `AVAILABLE`
+- `HOLDING`
+- `SOLD`
+- `USED`
+- `CANCELLED`
 
-- `TicketService.checkIn()` hiện chưa implement, route check-in chưa sẵn sàng để dùng production
-- Frontend chưa có page/component thực tế
-- Chưa có đồng bộ CORS/frontend integration rõ ràng
-- Chưa có bộ tài liệu môi trường dạng `.env.example`
-- Chưa có CI/CD
-- Chưa có mô tả deploy production
+### PaymentStatus
 
-## Hướng cập nhật tiếp theo
+- `PENDING`
+- `SUCCESS`
+- `EXPIRED`
+- `CANCELLED`
 
-- [TODO] Hoàn thiện frontend đặt vé
-- [TODO] Bổ sung auth flow phía frontend
-- [TODO] Hoàn thiện check-in cho staff
-- [TODO] Bổ sung `.env.example`
-- [TODO] Bổ sung hướng dẫn deploy production
-- [TODO] Chuẩn hóa seed data và tài khoản mặc định
-- [TODO] Thêm collection Postman hoặc OpenAPI examples
+### PaymentMethod
 
-## Gợi ý triển khai tiếp
-
-Nếu tiếp tục phát triển project này, thứ tự hợp lý là:
-
-1. Hoàn thiện API check-in
-2. Viết frontend cho flow xem event -> chọn vé -> tạo order -> thanh toán
-3. Chuẩn hóa biến môi trường và seed data
-4. Bổ sung test integration cho auth, order, ticket, payment webhook
-5. Thêm tài liệu deploy
+- `PERSONAL_QR`
