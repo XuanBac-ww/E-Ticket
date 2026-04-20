@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface IOrderItemRepository extends IBaseEntityRepository<OrderItem,Long> {
     Optional<OrderItem> findByIdAndOrderId(Long itemId, Long orderId);
+
+    boolean existsByTicketId(Long ticketId);
 }

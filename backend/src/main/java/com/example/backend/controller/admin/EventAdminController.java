@@ -9,7 +9,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin/events")
@@ -29,7 +35,7 @@ public class EventAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EventResponse> updateEvent(@PathVariable Long eventId,
                                                      @Valid @RequestBody UpdateEventRequest request) {
-        EventResponse response = eventService.updateEvent(eventId,request);
+        EventResponse response = eventService.updateEvent(eventId, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -37,8 +43,6 @@ public class EventAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteEventById(@PathVariable Long eventId) {
         eventService.deleteEventById(eventId);
-        return new ResponseEntity<>("Delete Successfully",HttpStatus.OK);
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
-
 }
-

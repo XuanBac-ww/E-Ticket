@@ -2,6 +2,17 @@ spring:
   web:
     resources:
       add-mappings: false
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -13,7 +24,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
     validate-on-migrate: true
-    out-of-order: false 
+    out-of-order: false
 
   jpa:
     hibernate:
@@ -23,10 +34,10 @@ spring:
       hibernate:
         format_sql: true
         JDBC:
-          time_zone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+          time_zone: Asia/Ho_Chi_Minh
 
   jackson:
-    time-zone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
+    time-zone: Asia/Ho_Chi_Minh
 
 logging:
   level:
@@ -40,3 +51,25 @@ app:
     secret: ${JWT_SECRET}
     access-token-expiration: ${JWT_ACCESS_EXPIRATION}
     refresh-token-expiration: ${JWT_REFRESH_EXPIRATION}
+  cookie:
+    secure: false
+    same-site: Lax
+  async:
+    mail:
+      core-pool-size: 2
+      max-pool-size: 4
+      queue-capacity: 200
+    ticket-qr:
+      core-pool-size: 2
+      max-pool-size: 4
+      queue-capacity: 200
+  payment:
+    qr-url: ${PAYMENT_QR_URL:}
+    receiver-name: ${PAYMENT_RECEIVER_NAME:}
+  mail:
+    enabled: false
+    from: no-reply@e-ticket.local
+    subject-prefix: "[E-Ticket]"
+    template-path: classpath:templates/mail/payment-confirmed.html
+    date-time-pattern: yyyy-MM-dd HH:mm
+    ticket-template-path: classpath:templates/mail/payment-tickets.html

@@ -1,5 +1,8 @@
 package com.example.backend.share.enums;
 
 public enum PaymentStatus {
-    SUCCESS, FAILED, PENDING
+    PENDING,
+    SUCCESS,
+    EXPIRED,
+    CANCELLED
 }

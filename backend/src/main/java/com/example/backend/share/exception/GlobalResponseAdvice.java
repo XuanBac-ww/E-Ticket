@@ -3,6 +3,7 @@ package com.example.backend.share.exception;
 import com.example.backend.dto.response.api.ApiResponse;
 import com.example.backend.dto.response.api.abstraction.BaseResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -16,9 +17,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Override
     public boolean supports(@NonNull MethodParameter returnType,
@@ -34,42 +36,47 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
                                   @NonNull ServerHttpRequest request,
                                   @NonNull ServerHttpResponse response) {
 
-        String path = request.getURI().getPath();
-
-        if (path.startsWith("/v3/api-docs")
-                || path.startsWith("/swagger-ui")
-                || path.equals("/swagger-ui.html")) {
+        if (shouldSkipWrapping(request) || isAlreadyWrapped(body, selectedConverterType)) {
             return body;
         }
 
-        if (body == null) {
-            return new ApiResponse<>(200, true, "Success", null);
-        }
-
-        if (body instanceof BaseResponse || body instanceof byte[]) {
-            return body;
-        }
-
-        if (ByteArrayHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
-            return body;
-        }
-
-        ApiResponse<Object> apiResponse = new ApiResponse<>(200, true, "Success", body);
+        ApiResponse<Object> apiResponse = new ApiResponse<>(resolveStatus(response), true, "Success", body);
 
         if (StringHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
-            try {
-                response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-                return objectMapper.writeValueAsString(apiResponse);
-            } catch (Exception e) {
-                throw new RuntimeException("Cannot serialize ApiResponse", e);
-            }
-        }
-
-        if (response instanceof ServletServerHttpResponse servletResponse) {
-            int status = servletResponse.getServletResponse().getStatus();
-            apiResponse.setCode(status);
+            return writeStringResponse(apiResponse, response);
         }
 
         return apiResponse;
+    }
+
+    private boolean shouldSkipWrapping(ServerHttpRequest request) {
+        String path = request.getURI().getPath();
+
+        return path.startsWith("/v3/api-docs")
+                || path.startsWith("/swagger-ui")
+                || path.equals("/swagger-ui.html");
+    }
+
+    private boolean isAlreadyWrapped(Object body, Class<? extends HttpMessageConverter<?>> converterType) {
+        return body instanceof BaseResponse
+                || body instanceof byte[]
+                || ByteArrayHttpMessageConverter.class.isAssignableFrom(converterType);
+    }
+
+    private int resolveStatus(ServerHttpResponse response) {
+        if (response instanceof ServletServerHttpResponse servletResponse) {
+            return servletResponse.getServletResponse().getStatus();
+        }
+
+        return 200;
+    }
+
+    private String writeStringResponse(ApiResponse<Object> apiResponse, ServerHttpResponse response) {
+        try {
+            response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+            return objectMapper.writeValueAsString(apiResponse);
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot serialize ApiResponse", e);
+        }
     }
 }

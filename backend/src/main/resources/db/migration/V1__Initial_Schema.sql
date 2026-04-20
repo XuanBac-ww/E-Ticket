@@ -112,23 +112,6 @@ CREATE TABLE order_items (
                              price_at_purchase DECIMAL(19, 2) NOT NULL
 );
 
-CREATE TABLE payments (
-                          id BIGSERIAL PRIMARY KEY,
-                          created_at TIMESTAMP NOT NULL,
-                          updated_at TIMESTAMP,
-                          created_by VARCHAR(255),
-                          updated_by VARCHAR(255),
-
-                          order_id BIGINT NOT NULL REFERENCES orders(id),
-                          amount DECIMAL(19, 2) NOT NULL,
-                          payment_method VARCHAR(50),
-                          momo_trans_id VARCHAR(100) UNIQUE,
-                          momo_request_id VARCHAR(100) UNIQUE,
-                          status VARCHAR(50) NOT NULL,
-                          payment_date TIMESTAMP,
-                          message TEXT
-);
-
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_tickets_status ON tickets(status);
 CREATE INDEX idx_tickets_qr ON tickets(qr_code_hash);

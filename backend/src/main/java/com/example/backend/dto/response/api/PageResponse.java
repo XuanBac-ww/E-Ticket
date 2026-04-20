@@ -18,9 +18,9 @@ public class PageResponse<T> extends BaseResponse {
     private int totalPages;
     private boolean last;
 
-    public PageResponse(int status,boolean success,String message,List<T> data,
-                        int page, int size, long totalElements,int totalPages, boolean last) {
-        super(status,success,message);
+    public PageResponse(int code, boolean success, String message, List<T> data,
+                        int page, int size, long totalElements, int totalPages, boolean last) {
+        super(code, success, message);
         this.data = data;
         this.page = page;
         this.size = size;

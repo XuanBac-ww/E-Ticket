@@ -1,20 +1,24 @@
 package com.example.backend.dto.request.ticketType;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
 public record CreateTicketTypeRequest(
-        @NotBlank(message = "Tên loại vé không được để trống")
-        @Size(max = 100, message = "Tên loại vé không được vượt quá 100 ký tự")
+        @NotBlank(message = "Ticket type name must not be blank")
+        @Size(max = 100, message = "Ticket type name must not exceed 100 characters")
         String name,
 
-        @NotNull(message = "Giá vé không được để trống")
-        @DecimalMin(value = "0.0", inclusive = true, message = "Giá vé phải lớn hơn hoặc bằng 0")
+        @NotNull(message = "Ticket price must not be null")
+        @DecimalMin(value = "0.0", inclusive = true, message = "Ticket price must be greater than or equal to 0")
         BigDecimal price,
 
-        @NotNull(message = "Tổng số lượng vé không được để trống")
-        @Positive(message = "Tổng số lượng vé phải lớn hơn 0")
+        @NotNull(message = "Total ticket quantity must not be null")
+        @Positive(message = "Total ticket quantity must be greater than 0")
         Integer totalQuantity
 ) {
 }

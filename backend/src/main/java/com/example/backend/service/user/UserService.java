@@ -35,30 +35,30 @@ public class UserService implements IUserService {
     @Override
     public Map<String, Object> getMyProfile(CustomUserPrincipal principal) {
         User user = userRepository.findByEmail(principal.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Email Không tồn tại"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email does not exist"));
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("userId",user.getId());
-        data.put("email",user.getEmail());
-        data.put("fullName",user.getFullName());
-        data.put("active",user.isActive());
+        data.put("userId", user.getId());
+        data.put("email", user.getEmail());
+        data.put("fullName", user.getFullName());
+        data.put("active", user.isActive());
 
-        if(user.getRole() == UserRole.CUSTOMER) {
+        if (user.getRole() == UserRole.CUSTOMER) {
             Customer customer = customerRepository.findById(user.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy customer"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
             data.put("phoneNumber", customer.getPhoneNumber());
             data.put("loyaltyPoints", customer.getLoyaltyPoints());
         }
 
         if (user.getRole() == UserRole.STAFF) {
             Staff staff = staffRepository.findById(user.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy staff"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
             data.put("staffCode", staff.getStaffCode());
             data.put("managedEventId", staff.getManagedEventId());
         }
 
         if (user.getRole() == UserRole.ADMIN) {
             Admin admin = adminRepository.findById(user.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy admin"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
             data.put("adminCode", admin.getAdminCode());
         }
 
@@ -69,37 +69,35 @@ public class UserService implements IUserService {
     @Transactional
     public String updateProfile(CustomUserPrincipal principal, UpdateProfileRequest request) {
         User user = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (user.getRole() == UserRole.CUSTOMER) {
             Customer customer = customerRepository.findById(user.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy customer"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
             customer.setPhoneNumber(request.phoneNumber());
             customer.setFullName(request.fullName());
             customerRepository.save(customer);
         }
 
         userRepository.save(user);
-        return "Cập nhật thông tin thành công";
+        return "Profile updated successfully";
     }
 
     @Override
     @Transactional
     public String changePassword(CustomUserPrincipal principal, ChangePasswordRequest request) {
         User user = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy user"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
-            throw new AppException("Mật khẩu cũ không đúng");
+            throw new AppException("Current password is incorrect");
         }
 
         if (!request.newPassword().equals(request.confirmNewPassword())) {
-            throw new AppException("Xác nhận mật khẩu mới không khớp");
+            throw new AppException("New password confirmation does not match");
         }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
-        return "Đổi mật khẩu thành công";
+        return "Password changed successfully";
     }
-
-
 }

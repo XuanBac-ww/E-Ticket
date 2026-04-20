@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IStaffRepository extends IBaseEntityRepository<Staff, Long> {
+    boolean existsByStaffCode(String staffCode);
 }

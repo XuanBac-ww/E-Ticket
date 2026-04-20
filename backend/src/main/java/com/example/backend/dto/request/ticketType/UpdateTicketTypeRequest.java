@@ -1,17 +1,18 @@
 package com.example.backend.dto.request.ticketType;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
 public record UpdateTicketTypeRequest(
-
-        @NotNull(message = "Giá vé không được để trống")
-        @DecimalMin(value = "0.0", inclusive = true, message = "Giá vé phải lớn hơn hoặc bằng 0")
+        @NotNull(message = "Ticket price must not be null")
+        @DecimalMin(value = "0.0", inclusive = true, message = "Ticket price must be greater than or equal to 0")
         BigDecimal price,
 
-        @NotNull(message = "Tổng số lượng vé không được để trống")
-        @Positive(message = "Tổng số lượng vé phải lớn hơn 0")
+        @NotNull(message = "Total ticket quantity must not be null")
+        @Positive(message = "Total ticket quantity must be greater than 0")
         Integer totalQuantity
 ) {
 }

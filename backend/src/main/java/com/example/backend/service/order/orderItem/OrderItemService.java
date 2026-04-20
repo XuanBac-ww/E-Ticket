@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 @Service
@@ -32,44 +33,44 @@ public class OrderItemService implements IOrderItemService {
     private final ITicketRepository ticketRepository;
 
     @Override
-    public List<OrderItemResponse> getOrderItems(Long orderId) {
-        Order order = orderSupportService.findOrderById(orderId);
+    public List<OrderItemResponse> getOrderItems(Long orderId, Long userId) {
+        Order order = findCustomerOrderWithItems(orderId, userId);
         return order.getItems().stream()
                 .map(orderItemMapper::toResponse)
                 .toList();
     }
 
     @Override
-    public OrderItemResponse getOrderItem(Long orderId, Long itemId) {
-        orderSupportService.findOrderById(orderId);
+    public OrderItemResponse getOrderItem(Long orderId, Long itemId, Long userId) {
+        validateOrderOwner(orderSupportService.findOrderById(orderId), userId);
 
         OrderItem orderItem = orderItemRepository.findByIdAndOrderId(itemId, orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("OrderItem Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order item not found"));
 
         return orderItemMapper.toResponse(orderItem);
     }
 
     @Override
     @Transactional
-    public OrderItemResponse addOrderItem(Long orderId, CreateOrderItemRequest request) {
-        Order order = orderSupportService.findOrderWithItems(orderId);
+    public OrderItemResponse addOrderItem(Long orderId, CreateOrderItemRequest request, Long userId) {
+        Order order = findCustomerOrderWithItems(orderId, userId);
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new AppException("Chỉ được thêm item khi đơn hàng ở trạng thái PENDING");
+            throw new AppException("Items can only be added when the order is in PENDING status");
         }
 
         boolean existedTicketInOrder = order.getItems().stream()
                 .anyMatch(item -> item.getTicket().getId().equals(request.ticketId()));
 
         if (existedTicketInOrder) {
-            throw new AppException("Vé đã tồn tại trong đơn hàng");
+            throw new AppException("Ticket already exists in the order");
         }
 
         Date now = new Date();
         Date holdExpiresAt = orderSupportService.buildHoldExpiresAt();
 
         Ticket ticket = ticketRepository.findByIdInFetchTicketType(request.ticketId())
-                .orElseThrow(() -> new ResourceNotFoundException("Ticket Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
 
         TicketType ticketType = orderSupportService.validatePurchasableTicket(ticket, now);
 
@@ -92,11 +93,11 @@ public class OrderItemService implements IOrderItemService {
 
     @Override
     @Transactional
-    public void deleteOrderItem(Long orderId, Long itemId) {
-        Order order = orderSupportService.findOrderWithItems(orderId);
+    public void deleteOrderItem(Long orderId, Long itemId, Long userId) {
+        Order order = findCustomerOrderWithItems(orderId, userId);
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new AppException("Chỉ được xóa item khi đơn hàng ở trạng thái PENDING");
+            throw new AppException("Items can only be deleted when the order is in PENDING status");
         }
 
         OrderItem item = orderSupportService.findOrderItemByOrderId(itemId, orderId);
@@ -116,4 +117,15 @@ public class OrderItemService implements IOrderItemService {
         orderRepository.save(order);
     }
 
+    private Order findCustomerOrderWithItems(Long orderId, Long userId) {
+        Order order = orderSupportService.findOrderWithItems(orderId);
+        validateOrderOwner(order, userId);
+        return order;
+    }
+
+    private void validateOrderOwner(Order order, Long userId) {
+        if (order.getCustomer() == null || !Objects.equals(order.getCustomer().getId(), userId)) {
+            throw new ResourceNotFoundException("Order not found");
+        }
+    }
 }

@@ -10,8 +10,8 @@ import com.example.backend.service.order.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -20,22 +20,22 @@ public class OrderController implements OrderApi {
 
     private final IOrderService orderService;
 
-
     @Override
     public ResponseEntity<OrderResponse> createOrder(CreateOrderRequest request,
                                                      CustomUserPrincipal principal) {
-        return new ResponseEntity<>(orderService.createOrder(principal.getUserId(),request),HttpStatus.OK);
+        return new ResponseEntity<>(orderService.createOrder(principal.getUserId(), request), HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<PageResponse<OrderResponse>> getAllOrders(int page, int size) {
-        PageResponse<OrderResponse> response = orderService.getAllOrders(page, size);
+    public ResponseEntity<PageResponse<OrderResponse>> getAllOrders(int page, int size,
+                                                                    CustomUserPrincipal principal) {
+        PageResponse<OrderResponse> response = orderService.getAllOrders(principal.getUserId(), page, size);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<OrderResponse> getOrderById(Long orderId) {
-        OrderResponse response = orderService.getOrderById(orderId);
+    public ResponseEntity<OrderResponse> getOrderById(Long orderId, CustomUserPrincipal principal) {
+        OrderResponse response = orderService.getOrderById(orderId, principal.getUserId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -46,14 +46,14 @@ public class OrderController implements OrderApi {
     }
 
     @Override
-    public ResponseEntity<OrderResponse> cancelOrder(Long orderId) {
-        OrderResponse response = orderService.cancelOrder(orderId);
+    public ResponseEntity<OrderResponse> cancelOrder(Long orderId, CustomUserPrincipal principal) {
+        OrderResponse response = orderService.cancelOrder(orderId, principal.getUserId());
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<String> deleteOrder(Long orderId) {
-        orderService.deleteOrder(orderId);
-        return new ResponseEntity<>("delete successful", HttpStatus.OK);
+    public ResponseEntity<String> deleteOrder(Long orderId, CustomUserPrincipal principal) {
+        orderService.deleteOrder(orderId, principal.getUserId());
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
 }

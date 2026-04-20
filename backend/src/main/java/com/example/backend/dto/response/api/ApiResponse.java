@@ -6,14 +6,14 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.jspecify.annotations.Nullable;
 
-@NoArgsConstructor
 @Getter
 @Setter
+@NoArgsConstructor
 public class ApiResponse<T> extends BaseResponse {
-
+    @Nullable
     private T data;
 
-    public ApiResponse(int code, boolean success, String message,@Nullable T data) {
+    public ApiResponse(int code, boolean success, String message, @Nullable T data) {
         super(code, success, message);
         this.data = data;
     }

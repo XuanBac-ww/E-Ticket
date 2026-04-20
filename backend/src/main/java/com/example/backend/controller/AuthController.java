@@ -13,7 +13,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -43,5 +46,22 @@ public class AuthController {
         return new ResponseEntity<>(authService.logout(response),HttpStatus.OK);
     }
 
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> csrf(CsrfToken csrfToken) {
+        return new ResponseEntity<>(
+                Map.of(
+                        "token", csrfToken.getToken(),
+                        "headerName", csrfToken.getHeaderName(),
+                        "parameterName", csrfToken.getParameterName()
+                ),
+                HttpStatus.OK
+        );
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF', 'CUSTOMER')")
+    public ResponseEntity<AuthResponse> me(@AuthenticationPrincipal CustomUserPrincipal principal) {
+        return new ResponseEntity<>(authService.me(principal), HttpStatus.OK);
+    }
 
 }

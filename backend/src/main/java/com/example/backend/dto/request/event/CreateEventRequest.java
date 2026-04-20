@@ -7,27 +7,27 @@ import java.util.Date;
 
 @ValidEventTime
 public record CreateEventRequest(
-        @NotBlank(message = "Tiêu đề không được để trống")
-        @Size(max = 255, message = "Tiêu đề không được vượt quá 255 ký tự")
+        @NotBlank(message = "Title must not be blank")
+        @Size(max = 255, message = "Title must not exceed 255 characters")
         String title,
 
-        @NotBlank(message = "Mô tả không được để trống")
-        @Size(max = 5000, message = "Mô tả không được vượt quá 5000 ký tự")
+        @NotBlank(message = "Description must not be blank")
+        @Size(max = 5000, message = "Description must not exceed 5000 characters")
         String description,
 
-        @NotBlank(message = "Địa điểm không được để trống")
-        @Size(max = 255, message = "Địa điểm không được vượt quá 255 ký tự")
+        @NotBlank(message = "Location must not be blank")
+        @Size(max = 255, message = "Location must not exceed 255 characters")
         String location,
 
-        @NotNull(message = "Thời gian bắt đầu không được để trống")
-        @FutureOrPresent(message = "Thời gian bắt đầu phải là hiện tại hoặc tương lai")
+        @NotNull(message = "Start time must not be null")
+        @FutureOrPresent(message = "Start time must be in the present or future")
         Date startTime,
 
-        @NotNull(message = "Thời gian kết thúc không được để trống")
-        @Future(message = "Thời gian kết thúc phải ở tương lai")
+        @NotNull(message = "End time must not be null")
+        @Future(message = "End time must be in the future")
         Date endTime,
 
-        @Size(max = 1000, message = "Đường dẫn ảnh không được vượt quá 1000 ký tự")
+        @Size(max = 1000, message = "Image URL must not exceed 1000 characters")
         String imageUrl
-) implements IEventTimeRequest{
+) implements IEventTimeRequest {
 }

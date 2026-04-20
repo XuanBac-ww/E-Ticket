@@ -8,9 +8,11 @@ import com.example.backend.dto.response.event.EventResponse;
 import com.example.backend.entities.Event;
 import com.example.backend.mapper.IEventMapper;
 import com.example.backend.repository.IEventRepository;
+import com.example.backend.repository.ITicketTypeRepository;
 import com.example.backend.share.exception.AppException;
 import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -21,19 +23,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EventService implements IEventService {
 
     private final IEventRepository eventRepository;
     private final IEventMapper eventMapper;
+    private final ITicketTypeRepository ticketTypeRepository;
 
     @Override
     public PageResponse<EventResponse> getAllEvents(int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
         Page<Event> events = eventRepository.findAll(pageable);
 
-        return buildPageResponse(events, "Lấy danh sách sự kiện thành công");
+        return buildPageResponse(events, "Events retrieved successfully");
     }
 
     @Override
@@ -45,13 +49,13 @@ public class EventService implements IEventService {
                 ? eventRepository.findAll(pageable)
                 : eventRepository.searchEvents(keyword, pageable);
 
-        return buildPageResponse(events, "Tìm kiếm sự kiện thành công");
+        return buildPageResponse(events, "Events searched successfully");
     }
 
     @Override
     public EventResponse findEventById(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
         return eventMapper.toResponse(event);
     }
 
@@ -59,7 +63,7 @@ public class EventService implements IEventService {
     @Transactional
     public EventResponse createEvent(CreateEventRequest request) {
         if (eventRepository.existsEventByTitle(request.title())) {
-            throw new AppException("Event exists");
+            throw new AppException("Event already exists");
         }
 
         Event event = eventMapper.createEntity(request);
@@ -71,7 +75,7 @@ public class EventService implements IEventService {
     @Transactional
     public EventResponse updateEvent(Long eventId, UpdateEventRequest request) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
 
         event.setLocation(request.location());
         event.setStartTime(request.startTime());
@@ -85,8 +89,15 @@ public class EventService implements IEventService {
     @Transactional
     public void deleteEventById(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResourceNotFoundException("Event Not Found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+
+        if (ticketTypeRepository.existsByEventId(eventId)) {
+            log.warn("Refusing to delete eventId={} because ticket types already exist", eventId);
+            throw new AppException("Cannot delete an event that already has ticket types");
+        }
+
         eventRepository.delete(event);
+        log.info("Deleted eventId={}", eventId);
     }
 
     private PageResponse<EventResponse> buildPageResponse(Page<Event> events, String message) {
@@ -104,5 +115,4 @@ public class EventService implements IEventService {
                 events.isLast()
         );
     }
-
 }

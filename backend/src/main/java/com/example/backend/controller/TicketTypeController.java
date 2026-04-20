@@ -11,7 +11,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -33,7 +40,7 @@ public class TicketTypeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TicketTypeResponse> updateTicketType(@PathVariable Long id,
                                                                @Valid @RequestBody UpdateTicketTypeRequest request) {
-        TicketTypeResponse response = ticketTypeService.updateTicketType(id,request);
+        TicketTypeResponse response = ticketTypeService.updateTicketType(id, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -41,7 +48,7 @@ public class TicketTypeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteTicketType(@PathVariable Long id) {
         ticketTypeService.deleteTicketType(id);
-        return new ResponseEntity<>("Delete Successfully", HttpStatus.OK);
+        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
     }
 
     @GetMapping("/{id}/tickets")
@@ -54,7 +61,7 @@ public class TicketTypeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TicketResponse>> createTicketForTicketType(@PathVariable Long id,
                                                                           @Valid @RequestBody CreateTicketRequest request) {
-        List<TicketResponse> response = ticketService.createTicketForTicketType(id,request);
+        List<TicketResponse> response = ticketService.createTicketForTicketType(id, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

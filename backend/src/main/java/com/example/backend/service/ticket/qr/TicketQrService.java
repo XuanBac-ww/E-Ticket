@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class TicketQrService implements ITicketQrService{
+public class TicketQrService implements ITicketQrService {
 
     @Override
     public byte[] generateQrCode(String content, int width, int height) {
@@ -36,7 +36,7 @@ public class TicketQrService implements ITicketQrService{
 
             return outputStream.toByteArray();
         } catch (Exception e) {
-            throw new RuntimeException("Không thể tạo QR code", e);
+            throw new RuntimeException("Failed to generate QR code", e);
         }
     }
 }

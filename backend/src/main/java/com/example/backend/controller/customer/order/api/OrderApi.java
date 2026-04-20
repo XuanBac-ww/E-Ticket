@@ -21,14 +21,17 @@ public interface OrderApi {
     @GetMapping("")
     @PreAuthorize("hasRole('CUSTOMER')")
     ResponseEntity<PageResponse<OrderResponse>> getAllOrders(@RequestParam(defaultValue = "0") int page,
-                                                             @RequestParam(defaultValue = "10") int size
+                                                             @RequestParam(defaultValue = "10") int size,
+                                                             @AuthenticationPrincipal CustomUserPrincipal principal
     );
 
     @GetMapping("/{orderId}")
     @PreAuthorize("hasRole('CUSTOMER')")
-    ResponseEntity<OrderResponse> getOrderById(@PathVariable Long orderId);
+    ResponseEntity<OrderResponse> getOrderById(@PathVariable Long orderId,
+                                               @AuthenticationPrincipal CustomUserPrincipal principal);
 
     @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable Long orderId,
             @Valid @RequestBody UpdateOrderStatusRequest request
@@ -36,8 +39,11 @@ public interface OrderApi {
 
     @PreAuthorize("hasRole('CUSTOMER')")
     @PatchMapping("/{orderId}/cancel")
-    ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long orderId);
+    ResponseEntity<OrderResponse> cancelOrder(@PathVariable Long orderId,
+                                              @AuthenticationPrincipal CustomUserPrincipal principal);
 
     @DeleteMapping("/{orderId}")
-    ResponseEntity<String> deleteOrder(@PathVariable Long orderId);
+    @PreAuthorize("hasRole('CUSTOMER')")
+    ResponseEntity<String> deleteOrder(@PathVariable Long orderId,
+                                       @AuthenticationPrincipal CustomUserPrincipal principal);
 }

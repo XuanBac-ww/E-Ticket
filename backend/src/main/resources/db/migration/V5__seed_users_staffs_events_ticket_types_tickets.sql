@@ -207,7 +207,7 @@ FROM (
              ('Summer Music Night', 'VIP',         'A01', 'AVAILABLE', 'QR_HASH_0001', FALSE, NULL::timestamp, NULL::timestamp, 0),
              ('Summer Music Night', 'VIP',         'A02', 'SOLD',      'QR_HASH_0002', TRUE,  NOW(),          NULL::timestamp, 0),
              ('Summer Music Night', 'STANDARD',    'B01', 'AVAILABLE', 'QR_HASH_0003', FALSE, NULL::timestamp, NULL::timestamp, 0),
-             ('Summer Music Night', 'STANDARD',    'B02', 'HELD',      'QR_HASH_0004', FALSE, NULL::timestamp, NOW() + INTERVAL '15 minutes', 0),
+             ('Summer Music Night', 'STANDARD',    'B02', 'HOLDING',      'QR_HASH_0004', FALSE, NULL::timestamp, NOW() + INTERVAL '15 minutes', 0),
              ('Tech Expo 2026',     'EARLY_BIRD',  'C01', 'SOLD',      'QR_HASH_0005', FALSE, NULL::timestamp, NULL::timestamp, 0),
              ('Tech Expo 2026',     'EARLY_BIRD',  'C02', 'AVAILABLE', 'QR_HASH_0006', FALSE, NULL::timestamp, NULL::timestamp, 0),
              ('Tech Expo 2026',     'REGULAR',     'D01', 'AVAILABLE', 'QR_HASH_0007', FALSE, NULL::timestamp, NULL::timestamp, 0),

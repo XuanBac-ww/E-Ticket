@@ -7,11 +7,11 @@ import java.util.List;
 
 public interface IOrderItemService {
 
-    List<OrderItemResponse> getOrderItems(Long orderId);
+    List<OrderItemResponse> getOrderItems(Long orderId, Long userId);
 
-    OrderItemResponse getOrderItem(Long orderId, Long itemId);
+    OrderItemResponse getOrderItem(Long orderId, Long itemId, Long userId);
 
-    OrderItemResponse addOrderItem(Long orderId, CreateOrderItemRequest request);
+    OrderItemResponse addOrderItem(Long orderId, CreateOrderItemRequest request, Long userId);
 
-    void deleteOrderItem(Long orderId, Long itemId);
+    void deleteOrderItem(Long orderId, Long itemId, Long userId);
 }

@@ -1,12 +1,9 @@
 package com.example.backend.dto.request.ticket;
 
-import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
 
-@Getter
-@Setter
-public class TicketCheckInRequest {
-    @NotNull(message = "qr không được trống ")
-    private String qrCodeHash;
+public record TicketCheckInRequest(
+        @NotBlank(message = "qrCodeHash must not be blank")
+        String qrCodeHash
+) {
 }

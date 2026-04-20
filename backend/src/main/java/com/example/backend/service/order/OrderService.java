@@ -14,10 +14,12 @@ import com.example.backend.mapper.IOrderMapper;
 import com.example.backend.repository.IOrderRepository;
 import com.example.backend.repository.ITicketRepository;
 import com.example.backend.service.order.share.IOrderSupportService;
+import com.example.backend.service.payment.IPaymentService;
 import com.example.backend.share.enums.OrderStatus;
 import com.example.backend.share.exception.AppException;
 import com.example.backend.share.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class OrderService implements IOrderService {
 
@@ -40,10 +43,12 @@ public class OrderService implements IOrderService {
     private final IOrderRepository orderRepository;
     private final IOrderMapper orderMapper;
     private final ITicketRepository ticketRepository;
+    private final IPaymentService paymentService;
 
     @Override
     @Transactional
-    public OrderResponse createOrder(Long userId,CreateOrderRequest request) {
+    public OrderResponse createOrder(Long userId, CreateOrderRequest request) {
+        log.info("Creating order for userId={} with itemCount={}", userId, request.items().size());
         Customer customer = orderSupportService.findCustomerById(userId);
         orderSupportService.validateCreateOrderRequest(request);
 
@@ -58,12 +63,7 @@ public class OrderService implements IOrderService {
 
         List<OrderItem> orderItems = new ArrayList<>(request.items().size());
 
-        Order order = Order.builder()
-                .customer(customer)
-                .status(OrderStatus.PENDING)
-                .items(orderItems)
-                .totalAmount(BigDecimal.ZERO)
-                .build();
+        Order order = orderMapper.createEntity(customer, orderItems, BigDecimal.ZERO, OrderStatus.PENDING);
 
         Date now = new Date();
         Date holdExpiresAt = orderSupportService.buildHoldExpiresAt();
@@ -90,22 +90,30 @@ public class OrderService implements IOrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
+        log.info(
+                "Created orderId={} for userId={} with itemCount={} totalAmount={}",
+                savedOrder.getId(),
+                userId,
+                savedOrder.getItems().size(),
+                savedOrder.getTotalAmount()
+        );
         return orderMapper.toResponse(savedOrder);
     }
 
     @Override
-    public PageResponse<OrderResponse> getAllOrders(int page, int size) {
+    public PageResponse<OrderResponse> getAllOrders(Long userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<Order> orders = orderRepository.findAll(pageable);
+        Page<Order> orders = orderRepository.findByCustomerId(userId, pageable);
 
         List<OrderResponse> orderList = orders.getContent().stream()
                 .map(orderMapper::toResponse)
                 .toList();
+        log.debug("Fetched orders userId={} page={} size={} resultCount={}", userId, page, size, orderList.size());
 
         return new PageResponse<>(
                 200,
                 true,
-                "Lấy tất cả các order thành công",
+                "Orders retrieved successfully",
                 orderList,
                 orders.getNumber(),
                 orders.getSize(),
@@ -116,8 +124,9 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public OrderResponse getOrderById(Long orderId) {
-        Order order = orderSupportService.findOrderById(orderId);
+    public OrderResponse getOrderById(Long orderId, Long userId) {
+        log.debug("Fetching order detail orderId={} userId={}", orderId, userId);
+        Order order = findCustomerOrderWithItems(orderId, userId);
         return orderMapper.toResponse(order);
     }
 
@@ -130,6 +139,7 @@ public class OrderService implements IOrderService {
 
         OrderStatus currentStatus = order.getStatus();
         OrderStatus newStatus = orderSupportService.parseOrderStatus(request);
+        log.info("Updating order status orderId={} from {} to {}", orderId, currentStatus, newStatus);
 
         orderSupportService.validateStatusTransition(currentStatus, newStatus);
 
@@ -143,38 +153,52 @@ public class OrderService implements IOrderService {
         order.setStatus(newStatus);
 
         Order savedOrder = orderRepository.save(order);
+        log.info("Updated order status orderId={} to {}", orderId, savedOrder.getStatus());
         return orderMapper.toResponse(savedOrder);
     }
 
     @Override
     @Transactional
-    public OrderResponse cancelOrder(Long orderId) {
-        Order order = orderSupportService.findOrderWithItems(orderId);
+    public OrderResponse cancelOrder(Long orderId, Long userId) {
+        Order order = findCustomerOrderWithItems(orderId, userId);
+        log.info("Cancelling orderId={} userId={} currentStatus={}", orderId, userId, order.getStatus());
 
         if (order.getStatus() != OrderStatus.PENDING) {
-            throw new AppException("Chỉ được hủy đơn hàng khi ở trạng thái PENDING");
+            log.warn("Cannot cancel orderId={} because currentStatus={}", orderId, order.getStatus());
+            throw new AppException("Only orders in PENDING status can be cancelled");
         }
 
+        paymentService.cancelPendingPayment(order);
         orderSupportService.updateTicketsWhenOrderCancelledOrExpired(order);
         order.setStatus(OrderStatus.CANCELLED);
 
         Order savedOrder = orderRepository.save(order);
+        log.info("Cancelled orderId={}", orderId);
         return orderMapper.toResponse(savedOrder);
     }
 
     @Override
     @Transactional
-    public void deleteOrder(Long orderId) {
-        Order order = orderSupportService.findOrderWithItems(orderId);
+    public void deleteOrder(Long orderId, Long userId) {
+        Order order = findCustomerOrderWithItems(orderId, userId);
+        log.info("Deleting orderId={} userId={} currentStatus={}", orderId, userId, order.getStatus());
 
         if (order.getStatus() == OrderStatus.PAID) {
-            throw new AppException("Không được xóa, đơn hàng đã được thanh toán");
+            log.warn("Refusing to delete paid orderId={}", orderId);
+            throw new AppException("Paid orders cannot be deleted");
         }
 
         if (order.getStatus() == OrderStatus.PENDING) {
             orderSupportService.updateTicketsWhenOrderCancelledOrExpired(order);
         }
 
+        paymentService.deletePaymentForOrder(order);
         orderRepository.delete(order);
+        log.info("Deleted orderId={}", orderId);
+    }
+
+    private Order findCustomerOrderWithItems(Long orderId, Long userId) {
+        return orderRepository.findByIdAndCustomerIdWithItemsAndTickets(orderId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 }
